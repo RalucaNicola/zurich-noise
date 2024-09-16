@@ -1,11 +1,11 @@
 import PortalItem from "@arcgis/core/portal/PortalItem";
 import { mapConfig } from "../../config";
 import state from "../../stores/state";
-import WebMap from "@arcgis/core/WebMap";
-import MapView from "@arcgis/core/views/MapView";
+import WebScene from "@arcgis/core/WebScene";
+import SceneView from "@arcgis/core/views/SceneView";
 import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
 import { getMapCenterFromHashParams, setMapCenterToHashParams } from "../../utils/URLHashParams";
-let view: __esri.MapView = null;
+let view: __esri.SceneView = null;
 
 const listeners: IHandle[] = [];
 
@@ -28,13 +28,13 @@ export const initializeView = async (divRef: HTMLDivElement) => {
         });
 
         await portalItem.load();
-        const webmap = new WebMap({
+        const webmap = new WebScene({
             portalItem: portalItem
         });
         await webmap.load();
-        view = new MapView({
+        view = new SceneView({
             container: divRef,
-            map: webmap as WebMap,
+            map: webmap as WebScene,
             popup: {
                 dockEnabled: true,
                 dockOptions: {
@@ -49,12 +49,12 @@ export const initializeView = async (divRef: HTMLDivElement) => {
         (window as any).view = view;
 
         await view.when(async () => {
-            initializeViewEventListeners();
+            //initializeViewEventListeners();
             state.setViewLoaded();
-            const mapCenter = getMapCenterFromHashParams();
-            if (mapCenter) {
-                view.goTo({ zoom: mapCenter.zoom, center: [mapCenter.center.lon, mapCenter.center.lat] });
-            }
+            // const mapCenter = getMapCenterFromHashParams();
+            // if (mapCenter) {
+            //     view.goTo({ zoom: mapCenter.zoom, center: [mapCenter.center.lon, mapCenter.center.lat] });
+            // }
         });
     } catch (error) {
         const { name, message } = error;

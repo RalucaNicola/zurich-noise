@@ -1,7 +1,7 @@
 export const mapConfig = {
-  'web-map-id': '99f098808fc048bb89f89695106800a'
+  'web-map-id': 'e7138b9ab3744f40a0ed57dd7de979fd'
 };
 
-export const portalUrl = 'https://geoxc.maps.arcgis.com';
+export const portalUrl = 'https://zurich.maps.arcgis.com';
 
 export const applicationTitle = 'ArcGIS Template';
