@@ -17,7 +17,7 @@ import { getView } from '../Map/view';
 import { useEffect, useRef, useState } from 'react';
 
 const mapVolume = (value: number): number => {
-  if (value === 0) return 0;
+  if (value === -1) return 0;
   if (value < 35) return 0.1;
   if (value > 60) return 1;
   return (value - 30) / (60 - 30);
@@ -27,9 +27,9 @@ export const Noise = observer(() => {
   const { viewLoaded } = state;
   const audioRef = useRef<HTMLAudioElement>(null);
   const [layer, setLayer] = useState<__esri.VoxelLayer>(null);
-  const [volume, setVolume] = useState<number>(0);
-  const [color, setColor] = useState<Array<number>>([0, 0, 0, 0]);
+  const [volume, setVolume] = useState<string>('');
   const [allowSound, setAllowSound] = useState<boolean>(false);
+  const [uniqueValues, setUniqueValues] = useState(null);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -41,34 +41,51 @@ export const Noise = observer(() => {
     }
   }, [allowSound, audioRef]);
 
-  useEffect(() => {
-    if (audioRef.current) {
-      console.log(audioRef.current.volume, volume);
-      audioRef.current.volume = mapVolume(volume);
-    }
-  }, [volume, audioRef]);
+  //   useEffect(() => {
+  //     if (audioRef.current) {
+  //       console.log(audioRef.current.volume, volume);
+  //       audioRef.current.volume = mapVolume(volume);
+  //     }
+  //   }, [volume, audioRef]);
 
   useEffect(() => {
     if (viewLoaded) {
       const view = getView();
+      // get voxel layer
       const voxelLayer = view.map.layers.find(
-        (layer) => layer.title === 'zurich_noise_day_night_test'
+        (layer) => layer.title === 'noise_day_night_classified'
       ) as __esri.VoxelLayer;
-      setLayer(voxelLayer);
+
+      voxelLayer.when(() => {
+        setLayer(voxelLayer);
+        // get unique values
+        const style = voxelLayer.getVariableStyle(0);
+        //   console.log(style);
+        const uniqueValues = [];
+        style.uniqueValues.forEach((uv: __esri.VoxelUniqueValue) => {
+          const { r, g, b, a } = uv.color;
+          if (uv.value >= 0 && uv.value <= 6) {
+            uniqueValues.push({
+              label: uv.label,
+              value: uv.value,
+              color: { r, g, b, a },
+              enabled: uv.enabled
+            });
+          }
+        });
+        setUniqueValues(uniqueValues);
+        console.log(style);
+      });
+
       view.on('pointer-move', (evt: __esri.ViewPointerMoveEvent) => {
         view.hitTest(evt, { include: [voxelLayer] }).then((result) => {
           if (result.results && result.results.length > 0) {
             const attr = result.results[0].graphic.attributes;
             console.log(attr);
-            const volume = parseInt(attr['Voxel.ServiceValue']);
-            const color = voxelLayer
-              .getColorForContinuousDataValue(voxelLayer.currentVariableId, volume, false)
-              .toRgba();
+            const volume = attr['Voxel.ServiceValue'];
             setVolume(volume);
-            setColor(color);
           } else {
-            setVolume(0);
-            setColor([0, 0, 0, 0]);
+            setVolume('');
           }
         });
       });
@@ -93,13 +110,21 @@ export const Noise = observer(() => {
             <CalciteSegmentedControlItem value='0'>Day</CalciteSegmentedControlItem>
             <CalciteSegmentedControlItem value='1'>Night</CalciteSegmentedControlItem>
           </CalciteSegmentedControl>
-          <div
-            className={styles.indicator}
-            style={{
-              backgroundColor: `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]})`
-            }}
-          >
-            {volume} dB
+          <div className={styles.indicator}>{volume} dB</div>
+          <div className={styles.legend}>
+            {uniqueValues &&
+              uniqueValues.map((uv, index: number) => {
+                const { r, g, b, a } = uv.color;
+                return (
+                  <div
+                    className={styles.legendKey}
+                    key={index}
+                    style={{ backgroundColor: `rgba(${r},${g},${b},${a})` }}
+                  >
+                    <div className={styles.legendKeyLabel}>{uv.label.split('-')[1]}</div>
+                  </div>
+                );
+              })}
           </div>
           <audio ref={audioRef} autoPlay loop>
             <source src='./assets/CityNoise.mp3' type='audio/mp3'></source>
